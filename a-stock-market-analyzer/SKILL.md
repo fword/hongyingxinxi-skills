@@ -40,7 +40,8 @@ python .cursor/skills/a-stock-market-analyzer/scripts/extract_key_metrics.py
 ```python
 # 1. 获取数据（必须用Python，避免编码问题）
 import requests
-r = requests.get('http://139.9.141.198:60717/jihejingjia/data')
+API_URL = 'YOUR_API_URL_HERE'  # 替换为实际的API地址
+r = requests.get(API_URL)
 data = r.json()
 
 # 2. 提取关键数据
@@ -119,7 +120,9 @@ python scripts/extract_key_metrics.py
 
 ```python
 import requests
-response = requests.get('http://139.9.141.198:60717/jihejingjia/data')
+# 替换为你的API地址
+API_URL = 'YOUR_API_URL_HERE'
+response = requests.get(API_URL)
 data = response.json()
 ```
 
@@ -297,8 +300,9 @@ python .cursor/skills/a-stock-market-analyzer/scripts/analyze.py --simple
 ```python
 import requests
 
-# 获取数据
-r = requests.get('http://139.9.141.198:60717/jihejingjia/data')
+# 获取数据（替换为你的API地址）
+API_URL = 'YOUR_API_URL_HERE'
+r = requests.get(API_URL)
 data = r.json()
 
 ms = data['market_stats']

@@ -14,11 +14,17 @@ import io
 if sys.platform == 'win32':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
+# API地址配置 - 请替换为实际的API地址
+API_URL = ''  # TODO: 设置你的市场数据API地址
 
 def fetch_market_data():
     """获取市场数据"""
+    if not API_URL:
+        print("❌ 错误: 请先在脚本中配置API_URL")
+        sys.exit(1)
+    
     try:
-        response = requests.get('http://139.9.141.198:60717/jihejingjia/data', timeout=10)
+        response = requests.get(API_URL, timeout=10)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.Timeout:

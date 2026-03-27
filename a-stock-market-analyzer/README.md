@@ -114,6 +114,10 @@ pip install requests
 
 ## 数据来源
 
-API地址: `http://139.9.141.198:60717/jihejingjia/data`
+**配置说明**: 使用前需要在脚本中配置API地址
+
+1. 编辑 `scripts/analyze.py`，设置 `API_URL` 变量
+2. 编辑 `scripts/extract_key_metrics.py`，设置 `API_URL` 变量
+3. 在 `SKILL.md` 中的代码示例也需要替换为实际地址
 
 数据更新频率: 实时（交易时间内约每3分钟更新）
