@@ -68,6 +68,19 @@ python scripts/extract_key_metrics.py > metrics.json
 pip install requests
 ```
 
+## 配置说明
+
+使用前需要在脚本中配置API地址：
+
+1. 打开 `analyze.py`，找到 `API_URL = ''` 这行
+2. 将空字符串替换为你的实际API地址
+3. 对 `extract_key_metrics.py` 进行同样的配置
+
+示例：
+```python
+API_URL = 'http://your-api-server.com/market/data'
+```
+
 ## 注意事项
 
 - 脚本已处理Windows控制台编码问题
