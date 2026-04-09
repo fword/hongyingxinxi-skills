@@ -39,7 +39,17 @@ if [[ "$HAS_DATA" != "True" ]]; then
     exit 0
 fi
 
-# 查询止盈止损状态，输出到日志
-echo "=== $(date '+%Y-%m-%d %H:%M:%S') ===" >> ~/.jiankong_monitor.log
-curl -s "$BASE_URL/jiankong/alert/$TOKEN" >> ~/.jiankong_monitor.log 2>&1
-echo "" >> ~/.jiankong_monitor.log
+# 查询止盈止损状态，有触发时输出 HTML 查看地址
+RESULT=$(curl -s -H "Authorization: Bearer $TOKEN" "$BASE_URL/search/price_alert_json")
+TRIGGERED=$(echo "$RESULT" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+count = sum(1 for a in data.get('alerts', []) if a.get('hit_profit') or a.get('hit_loss'))
+print(count)
+" 2>/dev/null)
+
+if [[ "$TRIGGERED" -gt 0 ]]; then
+    echo "=== $(date '+%Y-%m-%d %H:%M:%S') ===" >> ~/.jiankong_monitor.log
+    echo "触发提醒 ${TRIGGERED} 条，查看详情：" >> ~/.jiankong_monitor.log
+    echo "$BASE_URL/search/price_alert?token=$TOKEN" >> ~/.jiankong_monitor.log
+fi

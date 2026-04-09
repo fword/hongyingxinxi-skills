@@ -1,7 +1,7 @@
 ---
 name: xiao-hong
-description: 股票持仓监控助手，支持增删改查持仓、止盈止损提醒、定时播报
-version: 1.0.0
+description: 股票持仓监控助手，支持增删改查持仓、止盈止损提醒、行情查询、定时播报
+version: 1.1.0
 user-invocable: true
 metadata:
   openclaw:
@@ -18,6 +18,8 @@ metadata:
 
 服务地址：`https://www.maxsou.cn/xiaohong`
 
+**认证方式**：所有需认证接口均使用 HTTP Header `Authorization: Bearer <TOKEN>`，或 URL 参数 `?token=<TOKEN>`（浏览器直接访问用）。
+
 ---
 
 ## 公共 Python 片段
@@ -26,7 +28,6 @@ metadata:
 ```python
 python3 -c "
 import os
-# OpenClaw: skill 安装在 ~/.openclaw/skills/xiao-hong 或 ~/.agents/skills/xiao-hong
 for p in ['~/.openclaw/skills/xiao-hong', '~/.agents/skills/xiao-hong']:
     full = os.path.expanduser(p)
     if os.path.exists(full):
@@ -74,7 +75,9 @@ json.dump(cfg, open(p,'w'), ensure_ascii=False, indent=2)
    - 用户消息中包含 token（如"我的 token 是 xxx"）→ 执行初始化：
      1. 验证：
         ```bash
-        curl -s -o /dev/null -w "%{http_code}" https://www.maxsou.cn/xiaohong/jiankong/user_stocks/<token>
+        curl -s -o /dev/null -w "%{http_code}" \
+          -H "Authorization: Bearer <TOKEN>" \
+          https://www.maxsou.cn/xiaohong/jiankong/user_stocks
         ```
         - `401` → 回复"该 token 未授权，请联系管理员"，停止
         - `200` → 用"写入 token"命令保存，回复"✅ token 已保存，后续无需再提供"，停止
@@ -106,8 +109,9 @@ json.dump(cfg, open(p,'w'), ensure_ascii=False, indent=2)
 **写入：**
 ```bash
 curl -s -X POST https://www.maxsou.cn/xiaohong/jiankong/user_stocks/upsert \
+  -H "Authorization: Bearer <TOKEN>" \
   -H "Content-Type: application/json" \
-  -d "{\"token\":\"<TOKEN>\",\"stock\":{\"ts_code\":\"<ts_code>\",\"cost_price\":<cost_price>,\"profit_ratio\":<profit_ratio>,\"loss_ratio\":<loss_ratio>}}"
+  -d "{\"stock\":{\"ts_code\":\"<ts_code>\",\"cost_price\":<cost_price>,\"profit_ratio\":<profit_ratio>,\"loss_ratio\":<loss_ratio>}}"
 ```
 
 ---
@@ -117,7 +121,8 @@ curl -s -X POST https://www.maxsou.cn/xiaohong/jiankong/user_stocks/upsert \
 关键词：查看、有哪些、持仓、我的股票、监控列表
 
 ```bash
-curl -s https://www.maxsou.cn/xiaohong/jiankong/user_stocks/<TOKEN>
+curl -s -H "Authorization: Bearer <TOKEN>" \
+  https://www.maxsou.cn/xiaohong/jiankong/user_stocks
 ```
 
 整理成表格输出：股票代码、成本价、止盈比例、止损比例及触发价。
@@ -132,26 +137,20 @@ curl -s https://www.maxsou.cn/xiaohong/jiankong/user_stocks/<TOKEN>
 
 ```bash
 curl -s -X POST https://www.maxsou.cn/xiaohong/jiankong/user_stocks/delete \
+  -H "Authorization: Bearer <TOKEN>" \
   -H "Content-Type: application/json" \
-  -d "{\"token\":\"<TOKEN>\",\"ts_code\":\"<ts_code>\"}"
+  -d "{\"ts_code\":\"<ts_code>\"}"
 ```
 
 ---
 
 ### 【查询止盈止损状态】
 
-关键词：状态、情况、涨了吗、跌了吗、止盈、止损、现在怎么样
+关键词：状态、情况、涨了吗、跌了吗、止盈、止损、现在怎么样、预警、持仓
 
 ```bash
-curl -s https://www.maxsou.cn/xiaohong/hangqing/health
-```
-
-- `has_data: false` → 回复"暂无行情数据"，停止
-- `is_stale: true` → 提示"当前为收盘价数据"，继续展示
-- 正常 → 继续：
-
-```bash
-curl -s https://www.maxsou.cn/xiaohong/jiankong/alert/<TOKEN>
+curl -s -H "Authorization: Bearer <TOKEN>" \
+  https://www.maxsou.cn/xiaohong/search/price_alert_json
 ```
 
 按格式输出：
@@ -168,6 +167,96 @@ curl -s https://www.maxsou.cn/xiaohong/jiankong/alert/<TOKEN>
   600230.SH  当前价 21.00 | 成本 20.00 | 盈利 +5.00%
 ─────────────────────────────
 ```
+
+输出完毕后，附上一句：
+
+> 如需实时刷新查看，请访问：https://www.maxsou.cn/xiaohong/search/price_alert?token=<TOKEN>
+
+---
+
+### 【行情汇总】
+
+关键词：行情、市场怎样、今天大盘、涨停、板块、热点
+
+```bash
+curl -s https://www.maxsou.cn/xiaohong/search/hangqing_summary_markdown
+```
+
+直接输出返回的 Markdown 内容（含市场统计、涨停分析、热点个股、概念板块）。
+
+若返回 503 → 回复"暂无行情数据，请在交易时段查询"。
+
+---
+
+### 【今日新股 / 复牌】
+
+关键词：新股、打新、今天新股、复牌、今天复牌
+
+**新股：**
+```bash
+curl -s https://www.maxsou.cn/xiaohong/search/new_stock_text
+```
+
+**复牌股：**
+```bash
+curl -s https://www.maxsou.cn/xiaohong/search/suspend_stock_text
+```
+
+整理后输出列表，无数据时回复"今日暂无新股/复牌"。
+
+---
+
+### 【趋势股筛选】
+
+关键词：趋势股、均线多头、强势股、选股
+
+```bash
+curl -s https://www.maxsou.cn/xiaohong/search/qushigu_markdown
+```
+
+直接输出 Markdown 表格。若返回 503 → 回复"趋势股数据暂未生成，每日收盘后约 16:30 更新"。
+
+---
+
+### 【精灵消息】
+
+关键词：精灵、消息、今日资讯、短消息、最新动态
+
+```bash
+curl -s "https://www.maxsou.cn/xiaohong/search/jingling_short_messages_text?page=1&page_size=20"
+```
+
+整理后输出，格式：`时间 | 股票 | 动态 | 题材`。
+
+---
+
+### 【行情预测 / 盘中分析】
+
+关键词：预测、今天怎么走、明天行情、盘中分析、DS预测
+
+**天级别预测（今日总结+明日预测）：**
+```bash
+curl -s https://www.maxsou.cn/xiaohong/search/ds_trade_text
+```
+
+**盘中10分钟预测：**
+```bash
+curl -s https://www.maxsou.cn/xiaohong/search/ds_trade_intraday_text
+```
+
+直接输出文本内容。
+
+---
+
+### 【行情服务状态】
+
+关键词：行情、服务正常吗、有没有数据、健康检查
+
+```bash
+curl -s https://www.maxsou.cn/xiaohong/hangqing/health
+```
+
+展示：服务状态、数据条数、最后更新时间、是否过时。
 
 ---
 
@@ -218,7 +307,7 @@ curl -s https://www.maxsou.cn/xiaohong/jiankong/alert/<TOKEN>
 
 6. 回复：
    > ✅ 已开启定时提醒，每 N 分钟检查一次（{days_label} {start}～{end}）
-   > 报告写入 `<SKILL_DIR>/monitor.log`
+   > 有止盈/止损触发时，日志写入 `<SKILL_DIR>/monitor.log`，内含 HTML 查看链接
 
 ---
 
@@ -260,18 +349,6 @@ json.dump(cfg, open(p,'w'), ensure_ascii=False, indent=2)
 若已有定时任务，询问"是否立即用新时间段重启？(是/否)"
 
 回复"✅ 通知时间已更新：{days_label} {start}～{end}"
-
----
-
-### 【行情服务状态】
-
-关键词：行情、服务正常吗、有没有数据
-
-```bash
-curl -s https://www.maxsou.cn/xiaohong/hangqing/health
-```
-
-展示：服务状态、数据条数、最后更新时间、是否过时。
 
 ---
 

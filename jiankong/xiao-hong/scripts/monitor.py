@@ -49,9 +49,12 @@ def in_time_window(schedule: dict) -> bool:
     return True
 
 
-def http_get(url: str) -> dict | None:
+def http_get(url: str, token: str = "") -> dict | None:
     try:
-        with urllib.request.urlopen(url, timeout=10) as resp:
+        req = urllib.request.Request(url)
+        if token:
+            req.add_header("Authorization", f"Bearer {token}")
+        with urllib.request.urlopen(req, timeout=10) as resp:
             return json.loads(resp.read().decode())
     except Exception:
         return None
@@ -72,16 +75,21 @@ def main():
     if not health or not health.get("has_data"):
         sys.exit(0)
 
-    result = http_get(f"{BASE_URL}/jiankong/alert/{token}")
+    result = http_get(f"{BASE_URL}/search/price_alert_json", token=token)
     if not result:
         sys.exit(0)
 
-    # 写入日志
+    alerts = result.get("alerts", [])
+    triggered = [a for a in alerts if a.get("hit_profit") or a.get("hit_loss")]
+    if not triggered:
+        sys.exit(0)
+
+    # 写入日志：输出触发提醒的 HTML 查看地址
     log_path = os.path.join(os.path.dirname(SKILL_DIR), "monitor.log")
     with open(log_path, "a", encoding="utf-8") as f:
         f.write(f"\n=== {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ===\n")
-        f.write(json.dumps(result, ensure_ascii=False, indent=2))
-        f.write("\n")
+        f.write(f"触发提醒 {len(triggered)} 条，查看详情：\n")
+        f.write(f"{BASE_URL}/search/price_alert?token={token}\n")
 
 
 if __name__ == "__main__":
